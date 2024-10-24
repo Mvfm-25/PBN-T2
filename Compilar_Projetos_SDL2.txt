@@ -1,0 +1,4 @@
+Para compilar projetos que usam do SDL2 :
+
+gcc -o saida.out entrada.c -lSDL2 -lSDL2_image
+
