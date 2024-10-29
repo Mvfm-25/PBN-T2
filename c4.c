@@ -3,11 +3,15 @@
 #include <SDL2/SDL_image.h>
 #include <stdbool.h>
 
-int vezes = 0;
-int flag = 0;
+typedef struct Quad
+{
+    int id;
+    SDL_Rect q;
+    int flag;  // 0 para cor inicial, 1 para cor alternada
+} Quad;
 
 int isInside(int mouseX, int mouseY, SDL_Rect quad);
-void changeColor(int *currentColor);
+void changeColor(SDL_Renderer *renderer, Quad *quad);
 
 int main(int argc, char** argv)
 {
@@ -16,8 +20,12 @@ int main(int argc, char** argv)
     SDL_Window* janela = SDL_CreateWindow("Teste matriz 2x2", 100, 100, 800, 600, SDL_WINDOW_SHOWN);
     
     // Inicialização do renderizador
-    SDL_Renderer * renderer = SDL_CreateRenderer(janela, -1, 0);
-    SDL_Rect quad1, quad2, quad3, quad4;
+    SDL_Renderer *renderer = SDL_CreateRenderer(janela, -1, 0);
+
+    Quad rec1 = {1, {50, 50, 100, 100}, 0};
+    Quad rec2 = {2, {150, 50, 100, 100}, 0};
+    Quad rec3 = {3, {50, 150, 100, 100}, 0};
+    Quad rec4 = {4, {150, 150, 100, 100}, 0};
     
     // Determinações para o WAVLoader
     SDL_AudioSpec wavSpec;
@@ -27,116 +35,87 @@ int main(int argc, char** argv)
     
     // 'Caminho' para o dispositivo de áudio disponível
     SDL_AudioDeviceID deviceId = SDL_OpenAudioDevice(NULL, 0, &wavSpec, NULL, 0);
-    
-    // Posicionamento e dimensionamento dos quadrados
-    quad1.x = 50;  quad1.y = 50;  quad1.w = 100; quad1.h = 100;
-    quad2.x = 150; quad2.y = 50;  quad2.w = 100; quad2.h = 100;
-    quad3.x = 50;  quad3.y = 150; quad3.w = 100; quad3.h = 100;
-    quad4.x = 150; quad4.y = 150; quad4.w = 100; quad4.h = 100;
-    
-    // Estado atual das cores (1 = azul, 2 = branco, 3 = vermelho, 4 = verde)
-    int currentColor1 = 1;
-    int currentColor2 = 2;
-    int currentColor3 = 3;
-    int currentColor4 = 4;
-    
-    while(true)
+
+    while (true)
     {
         SDL_Event event;
-        while(SDL_PollEvent(&event))
+        while (SDL_PollEvent(&event))
         {
-            if(event.type == SDL_QUIT)
+            if (event.type == SDL_QUIT)
             {
-                exit(0);
+                SDL_DestroyRenderer(renderer);
+                SDL_DestroyWindow(janela);
+                SDL_FreeWAV(wavBuffer);
+                SDL_Quit();
+                return 0;
             }
-            else if(event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT)
+            else if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT)
             {
                 int mouse_x = event.button.x;
                 int mouse_y = event.button.y;
                 printf("Coordenada X : %d\nCoordenada Y : %d\n", mouse_x, mouse_y);
                 
-                if(isInside(mouse_x, mouse_y, quad1))
+                if (isInside(mouse_x, mouse_y, rec1.q))
                 {
-                    changeColor(&currentColor1);
+                    changeColor(renderer, &rec1);
                 }
-                else if(isInside(mouse_x, mouse_y, quad2))
+                else if (isInside(mouse_x, mouse_y, rec2.q))
                 {
-                    changeColor(&currentColor2);
+                    changeColor(renderer, &rec2);
                 }
-                else if(isInside(mouse_x, mouse_y, quad3))
+                else if (isInside(mouse_x, mouse_y, rec3.q))
                 {
-                    changeColor(&currentColor3);
+                    changeColor(renderer, &rec3);
                 }
-                else if(isInside(mouse_x, mouse_y, quad4))
+                else if (isInside(mouse_x, mouse_y, rec4.q))
                 {
-                    changeColor(&currentColor4);
+                    changeColor(renderer, &rec4);
                 }
 
                 // Toca o áudio ao clicar
                 SDL_QueueAudio(deviceId, wavBuffer, wavLength); 
                 SDL_PauseAudioDevice(deviceId, 0);
-            }            
+            }
         }
 
         SDL_RenderClear(renderer);
-        
-        // Definir cores baseadas no estado atual
-        switch(currentColor1)
-        {
-            case 1: SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255); break;
-            case 5: SDL_SetRenderDrawColor(renderer, 255, 0, 255, 255); break; // cor alternativa
-        }
-        SDL_RenderFillRect(renderer, &quad1);
-        
-        switch(currentColor2)
-        {
-            case 2: SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); break;
-            case 6: SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); break; // cor alternativa
-        }
-        SDL_RenderFillRect(renderer, &quad2);
-        
-        switch(currentColor3)
-        {
-            case 3: SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255); break;
-            case 7: SDL_SetRenderDrawColor(renderer, 0, 255, 255, 255); break; // cor alternativa
-        }
-        SDL_RenderFillRect(renderer, &quad3);
-        
-        switch(currentColor4)
-        {
-            case 4: SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255); break;
-            case 8: SDL_SetRenderDrawColor(renderer, 255, 0, 255, 255); break; // cor alternativa
-        }
-        SDL_RenderFillRect(renderer, &quad4);
-        
+
+        // Definir cor para rec1 com base no valor de flag
+        if (rec1.flag == 0) SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);  // Azul
+        else SDL_SetRenderDrawColor(renderer, 255, 0, 255, 255);  // Rosa
+        SDL_RenderFillRect(renderer, &rec1.q);
+
+        // Definir cor para rec2
+        if (rec2.flag == 0) SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);  // Branco
+        else SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);  // Preto
+        SDL_RenderFillRect(renderer, &rec2.q);
+
+        // Definir cor para rec3
+        if (rec3.flag == 0) SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);  // Vermelho
+        else SDL_SetRenderDrawColor(renderer, 0, 255, 255, 255);  // Ciano
+        SDL_RenderFillRect(renderer, &rec3.q);
+
+        // Definir cor para rec4
+        if (rec4.flag == 0) SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);  // Verde
+        else SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);  // Azul
+        SDL_RenderFillRect(renderer, &rec4.q);
+
         // Cor de fundo
         SDL_SetRenderDrawColor(renderer, 9, 20, 33, 255);
         SDL_RenderPresent(renderer);        
     }
 
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(janela);    
-    SDL_FreeWAV(wavBuffer);
-    SDL_Quit();
     return 0;
 }
 
-// Função para verificar se o clique está dentro de um quadrado
 int isInside(int mouseX, int mouseY, SDL_Rect quad)
 {
-    if(mouseX > quad.x && mouseX < (quad.x + quad.w) && mouseY > quad.y && mouseY < (quad.y + quad.h))
-    {
-        return 1;
-    }
-    return 0;
+    return (mouseX > quad.x && mouseX < (quad.x + quad.w) && mouseY > quad.y && mouseY < (quad.y + quad.h));
 }
 
-// Função para alternar a cor de um quadrado
-void changeColor(int *currentColor)
+void changeColor(SDL_Renderer *renderer, Quad *quad)
 {
-    if (*currentColor <= 4)
-        *currentColor += 4; // Alterna para a cor alternativa
-    else
-        *currentColor -= 4; // Volta para a cor original
+    // Alterna a flag para alternar a cor
+    quad->flag = !quad->flag;
 }
 
