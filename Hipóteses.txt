@@ -1,0 +1,31 @@
+SDL_Texture * ficha = IMG_LoadTexture(renderer, "ficha.png")
+
+typedef struct Sprite
+{
+	// 0 -> NEUTRO
+	// 1 -> VERMELHO
+	// 2 -> AZUL
+	int time;
+	SDL_Rect r;
+	int x; int y;
+}
+
+Sprite[7][6] tabuleiro;
+
+6linhas x 7colunas 
+[DIMENSÕES DA IMAGEM À SE DISCUTIR DEPOIS]
+
+for(int colunas; colunas < 6; colunas++)
+{
+	for(int linhas; linhas < 7; linhas++)
+	{
+		Sprite sprite;
+	
+		sprite.time = 0;
+		// Só vai importar quando o time for determinado.
+		// sprite.x = colunas * larguraSprite;
+		// sprite.y = linhas * alturaSprite;
+		
+		//Sprite invisível só ocupando o espaço. Renderizar a textura da ficha dependendo de quem está jogando etc.	
+	}
+}
