@@ -1,21 +1,22 @@
-//Connect4 v.0001
-//UA : 301024 - [mvfm]
+//Connect4 v.0002 (não sei se mudei o suficiente para justificar uma mudança de versão)
+//UA : 3081124 - [mvfm]
+
+//Favor atualizar o UA com a data em que modificaste o código, assim como mudar o nome dentro dos colchetes.
+//Fica bonito pra quem está lendo.
+
 
 #include <stdio.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <stdbool.h>
 
-//Struct pra os discos do tabuleiro, REFINAR DPS.
-typedef struct disco
+//Struct pra os sprites do jogo, REFINAR DPS. Deve funcionar tanto para as fichas quanto o tabuleiro.
+typedef struct Sprite
 {
 	int id_time;
 	SDL_Rect box;
 	int posInit_X; int posInit_Y;
-} disco;
-
-//Matriz de (discos) com exatamente as mesmas dimensões da imagem do tabuleiro.
-//CUIDAR MUITO, MUITO COM O MALLOC.
+} Sprite;
 
 
 // Menu bem básico, antes da inicialização do tabuleiro. Determina os modos de jogo Player X Player, Player X CPU.
@@ -25,7 +26,15 @@ typedef struct disco
 //	Retorna 1 se a jogada é considera inválida, 0 caso contrário.
 int foraDosLimites(int posMouseX, int posMouseY, SDL_Rect tabuleiro);
 
+// Caso o determinaVez se mantenha com seu valor inicial '0' por qualquer razão quando o jogo é iniciado, a função é chamada para [...]
+//Sortear quem fica com a vez atualmente. Da maneira implementada, ele sempre será chamado quando determinaVez = 0.
+int determinaVez();
 
+// Preenche tabuleiro inicialmente serve apenas para determinar que espaços as fichas vão ocupar tanto no tabuleiro abstrato quanto no físico.
+void preencheTabuliero(Sprite tabuleiro[7][6], SDL_Renderer renderer);
+
+//Tabuleiro abstrato.
+Sprite tabuleiro[7][6];
 
 void main()
 {
@@ -33,14 +42,14 @@ void main()
 	SDL_Init(SDL_INIT_EVERYTHING);  
 	SDL_Window* janela = SDL_CreateWindow("Teste Connect 4 - G.D.M.", 100, 100, 1500, 1024, SDL_WINDOW_SHOWN);
 	SDL_Renderer *renderer = SDL_CreateRenderer(janela, -1, 0);
-	SDL_Texture *tabuleiro = IMG_LoadTexture(renderer, "./img/jogo_tabuleiro.png");
-	SDL_Texture *ficha_vermelha = IMG_LoadTexture(renderer, "./img/ficha_vermelha.png");
-	SDL_Texture *ficha_amarela = IMG_LoadTexture(renderer, "./img/ficha_amarela.png");
+	//Esperar a criação do sprite específico
+	//SDL_Texture *tabuleiro = IMG_LoadTexture(renderer, "./img/jogo_tabuleiro.png");
+	SDL_Texture *ficha_vermelha = IMG_LoadTexture(renderer, "./img/FichaVermelha.png");
+	SDL_Texture *ficha_azul = IMG_LoadTexture(renderer, "./img/FichaAzul.png");
   
- 	// Criação própria do tabuleiro. 
- 	// A altura e a largura são exatamente iguais às da imagem. FAVOR NÃO MEXER!
- 	SDL_Rect tabuleiroRect;
- 	tabuleiroRect.x = 200; tabuleiroRect.y = 150; tabuleiroRect.w = 1108; tabuleiroRect.h = 887;
+  	//Ignorar por enquanto, não é tão essencial o quanto eu achava.
+ 	//SDL_Rect tabuleiroRect;
+ 	//tabuleiroRect.x = 200; tabuleiroRect.y = 150; tabuleiroRect.w = 1108; tabuleiroRect.h = 887;
  	
  	//Coisas do fundo.
  	SDL_RenderClear(renderer);
@@ -58,8 +67,9 @@ void main()
  	int discoPosInit_X = 275;
  	int discoPosInit_Y = 50;
  	
- 	// 0 - Amarelo
+ 	// 0 - Sem time determinado.
  	// 1 - Vermelho
+ 	// 2 - Azul
  	int determinaVez = 0;
  	
  	while(true)
@@ -82,18 +92,25 @@ void main()
                 int mouse_y = event.button.y;
                 printf("Coordenada X : %d\nCoordenada Y : %d\n", mouse_x, mouse_y);
                 
+                //Modulzarizar isso muito, muito mais. Queremos estes comportamentos funcionando para qualuqer outra situação.
+                //Focar principalmente no contexto de um jogo PlayerxCpu.
                 if(foraDosLimites(mouse_x, mouse_y, tabuleiro) > 1)
                 {
                 	printf("Jogada inválida! Os turnos continuam iguais.\n");
                 } else 
                 {
-                	if(determinaVez == 0)
+                	if(determinaVez = 0)
                 	{
-                		printf("Vez atual : AMARELO");
+                		printf("Vez ainda não determinada...\n");
+                		determinaVez = sorteiaVez();
+                	}
+                	else if(determinaVez == 1)
+                	{
+                		printf("Vez atual : VERMELHO");
                 		determinaVez = determinaVez + 1;
                 	} else 
                 	{
-                		printf("Vez atual : VERMELHO");
+                		printf("Vez atual : AZUL");
                 		determinaVez = determinaVez - 1;
                 	}
                 
@@ -108,8 +125,49 @@ void main()
 	}
 }
 
+//Bem direto o que essa função faz, seguir o nome.
 int foraDosLimites(int posMouseX, int posMouseY, SDL_Rect tabuleiro)
 {
 	if(posMouseX > tabuleiro.x && posMouseX < (tabuleiro.x + tabuleiro.w) && posMouseY > tabuleiro.y && posMouseY < (tabuleiro.y + tabuleiro.h)){return 0;}
 	return 1;
+}
+
+//Bem direto o que essa função faz, seguir o nome.
+void preencheTabuleiro(Sprite tabuleiro[7][6], SDL_Renderer renderer)
+{
+	for(int colunas; colunas < 7; colunas++)
+	{
+		for(int linhas; linhas < 6; linhas++)
+		{
+			//Criando Sprite
+			Sprite *sprite;
+			
+			//Determinando a textura inicial do sprite. Sendo uma ficha invisível de 192x192 em resolução para futura conveniência.
+			//Logo, o ID_Time inicial é determinado = 0 (NEUTRO)
+			SDL_Texture *ficha = IMG_LoadTexture(renderer, "./img/FichaInvisivel.png");
+			sprite->id_time = 1;
+			sprite->box.w = 192; sprite->box.h = 192;
+			
+			//Determinação das posições 'bonitinhas' dentro do tabuleiro.
+			posInit_x = colunas * sprite->box.w;
+			posInit_y = linhas * sprite->box.h;
+			
+			// A linha SDL_RenderCopy propriamente imagino que deve apeans ocorrer no main() em si, por tudo que o renderizador deve fazer
+			//para realmente mostrar na tela a imagem da ficha renderizada. 
+			
+			tabuleiro[colunas][linhas] = sprite;
+		}
+	}
+	//PLACEHOLDER, NÃO LEVE A SÉRIO ESTA LINHA DE CÓDIGO! NÃO VAI FUNCIONAR!
+	return tabuleiro;
+}
+
+// :|
+int determinaVez()
+{
+	srand(time(NULL));
+	int rnd = rand();
+	int resultado = (rnd > RAND_MAX / 2) ? 1 : 2;
+	
+	return resultado;
 }
