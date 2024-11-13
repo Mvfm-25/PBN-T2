@@ -27,5 +27,6 @@ for(int colunas; colunas < 6; colunas++)
 		// sprite.y = linhas * alturaSprite;
 		
 		//Sprite invisível só ocupando o espaço. Renderizar a textura da ficha dependendo de quem está jogando etc.	
+		
 	}
 }
