@@ -6,15 +6,7 @@
 #define LINHAS 6
 #define COLUNAS 7
 
-int tabuleiro[LINHAS][COLUNAS] = {0};
-
-typedef struct disco
-{
-    int id_time;
-    SDL_Rect box;
-    int posInit_X;
-    int posInit_Y;
-} disco;
+int tabuleiro[LINHAS][COLUNAS] = {0};  // Tabuleiro inicializado com zeros
 
 SDL_Rect botao_coluna[COLUNAS];  // Definindo um array de botões para cada coluna
 
@@ -22,20 +14,26 @@ SDL_Rect botao_coluna[COLUNAS];  // Definindo um array de botões para cada colu
 int clicouEmBotaoColuna(int posMouseX, SDL_Rect *botao_coluna);
 
 // Função para fazer o disco "cair" na coluna selecionada
-void cairDisco(int coluna, int time, SDL_Rect *tabuleiroRect, SDL_Renderer *renderer, SDL_Texture *ficha_vermelha, SDL_Texture *ficha_amarela);
+void cairDisco(int coluna, int time);
+
+// Função para renderizar o tabuleiro com todas as fichas já jogadas
+void renderizarTabuleiro(SDL_Renderer *renderer, SDL_Texture *ficha_vermelha, SDL_Texture *ficha_azul, SDL_Rect *tabuleiroRect);
 
 int main(int argc, char *argv[])
 {
     SDL_Init(SDL_INIT_EVERYTHING);
-    SDL_Window* janela = SDL_CreateWindow("Teste Connect 4 - G.D.M.", 100, 100, 1500, 1024, SDL_WINDOW_SHOWN);
+    SDL_Window* janela = SDL_CreateWindow("Teste Connect 4 - G.D.M.", 100, 100, 800, 600, SDL_WINDOW_SHOWN);
     SDL_Renderer *renderer = SDL_CreateRenderer(janela, -1, 0);
 
-    SDL_Texture *tabuleiro_texture = IMG_LoadTexture(renderer, "./imgs/jogo_tabuleiro.png");
-    SDL_Texture *ficha_vermelha = IMG_LoadTexture(renderer, "./imgs/ficha_vermelha.png");
-    SDL_Texture *ficha_amarela = IMG_LoadTexture(renderer, "./imgs/ficha_amarela.png");
+    SDL_Texture *tabuleiro_texture = IMG_LoadTexture(renderer, "./img/boardQuad2.png");
+    SDL_Texture *ficha_vermelha = IMG_LoadTexture(renderer, "./img/fichaVermelha.png");
+    SDL_Texture *ficha_azul = IMG_LoadTexture(renderer, "./img/fichaAzul.png");
 
     SDL_Rect tabuleiroRect;
-    tabuleiroRect.x = 200; tabuleiroRect.y = 150; tabuleiroRect.w = 1108; tabuleiroRect.h = 887;
+    tabuleiroRect.x = 50;
+    tabuleiroRect.y = 50;
+    tabuleiroRect.w = 700;
+    tabuleiroRect.h = 600;
 
     // Inicializa a posição dos botões de coluna
     for (int i = 0; i < COLUNAS; i++) {
@@ -45,7 +43,7 @@ int main(int argc, char *argv[])
         botao_coluna[i].h = 40;  // Altura do botão
     }
 
-    int determinaVez = 0;
+    int determinaVez = 0;  // 0 para ficha azul, 1 para ficha vermelha
     bool jogoAtivo = true;
 
     while(jogoAtivo)
@@ -72,7 +70,7 @@ int main(int argc, char *argv[])
                 if (coluna != -1)
                 {
                     printf("Coluna selecionada: %d\n", coluna);
-                    cairDisco(coluna, determinaVez, &tabuleiroRect, renderer, ficha_vermelha, ficha_amarela);
+                    cairDisco(coluna, determinaVez);
                     determinaVez = (determinaVez + 1) % 2;  // Alterna a vez entre os jogadores
                 }
                 else
@@ -81,15 +79,15 @@ int main(int argc, char *argv[])
                 }
             }
         }
-        
-        SDL_RenderClear(renderer);
-        SDL_RenderCopy(renderer, tabuleiro_texture, NULL, &tabuleiroRect);
 
-        // Renderiza os botões de cada coluna
-        for (int i = 0; i < COLUNAS; i++) {
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // Cor branca para os botões
-            SDL_RenderFillRect(renderer, &botao_coluna[i]);
-        }
+        // Renderiza o tabuleiro e as fichas jogadas
+        SDL_RenderClear(renderer);
+
+        // Renderiza as fichas no tabuleiro
+        renderizarTabuleiro(renderer, ficha_vermelha, ficha_azul, &tabuleiroRect);
+
+        // Renderiza o tabuleiro por último, cobrindo as fichas parcialmente
+        SDL_RenderCopy(renderer, tabuleiro_texture, NULL, &tabuleiroRect);
 
         SDL_RenderPresent(renderer);
     }
@@ -97,6 +95,7 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+// Função para verificar se o clique foi em uma das colunas
 int clicouEmBotaoColuna(int posMouseX, SDL_Rect *botao_coluna)
 {
     for (int i = 0; i < COLUNAS; i++) {
@@ -107,7 +106,8 @@ int clicouEmBotaoColuna(int posMouseX, SDL_Rect *botao_coluna)
     return -1;  // Retorna -1 se não clicou em nenhum botão válido
 }
 
-void cairDisco(int coluna, int time, SDL_Rect *tabuleiroRect, SDL_Renderer *renderer, SDL_Texture *ficha_vermelha, SDL_Texture *ficha_amarela)
+// Função para simular o disco caindo e registrar o movimento no tabuleiro
+void cairDisco(int coluna, int time)
 {
     int linha = -1;
     for (int i = LINHAS - 1; i >= 0; i--)
@@ -121,21 +121,36 @@ void cairDisco(int coluna, int time, SDL_Rect *tabuleiroRect, SDL_Renderer *rend
 
     if (linha != -1)
     {
-        tabuleiro[linha][coluna] = time + 1; // 1 para Amarelo e 2 para Vermelho
+        tabuleiro[linha][coluna] = time + 1; // 1 para Azul e 2 para Vermelho
+    }
+}
 
-        SDL_Rect discoRect;
-        discoRect.w = tabuleiroRect->w / COLUNAS;
-        discoRect.h = tabuleiroRect->h / LINHAS;
-        discoRect.x = tabuleiroRect->x + coluna * discoRect.w;
-        discoRect.y = tabuleiroRect->y + linha * discoRect.h;
+// Função para renderizar o tabuleiro com todas as fichas já jogadas
+void renderizarTabuleiro(SDL_Renderer *renderer, SDL_Texture *ficha_vermelha, SDL_Texture *ficha_azul, SDL_Rect *tabuleiroRect)
+{
+    SDL_Rect discoRect;
+    discoRect.w = (tabuleiroRect->w / COLUNAS) * 0.9;  // 90% do tamanho da célula
+    discoRect.h = (tabuleiroRect->h / LINHAS) * 0.9;  // 90% do tamanho da célula
 
-        if (time == 0)
+    for (int i = 0; i < LINHAS; i++)
+    {
+        for (int j = 0; j < COLUNAS; j++)
         {
-            SDL_RenderCopy(renderer, ficha_amarela, NULL, &discoRect);
-        }
-        else
-        {
-            SDL_RenderCopy(renderer, ficha_vermelha, NULL, &discoRect);
+            if (tabuleiro[i][j] != 0)  // Se houver uma ficha na posição
+            {
+                discoRect.x = tabuleiroRect->x + j * (tabuleiroRect->w / COLUNAS) + (tabuleiroRect->w / COLUNAS) * 0.05;
+                discoRect.y = tabuleiroRect->y + i * (tabuleiroRect->h / LINHAS) + (tabuleiroRect->h / LINHAS) * 0.05;
+
+                if (tabuleiro[i][j] == 1)  // Ficha azul
+                {
+                    SDL_RenderCopy(renderer, ficha_azul, NULL, &discoRect);
+                }
+                else if (tabuleiro[i][j] == 2)  // Ficha vermelha
+                {
+                    SDL_RenderCopy(renderer, ficha_vermelha, NULL, &discoRect);
+                }
+            }
         }
     }
 }
+
