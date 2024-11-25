@@ -25,9 +25,11 @@ int main(int argc, char *argv[])
     SDL_Window* janela = SDL_CreateWindow("Teste Connect 4 - G.D.M.", 100, 100, 800, 600, SDL_WINDOW_SHOWN);
     SDL_Renderer *renderer = SDL_CreateRenderer(janela, -1, 0);
 
+    // Melhorando a representação do tabuleiro, não se preocupar com isso por enquanto.
+    // Focar no comportamento das fichas por enquanto.
     SDL_Texture *tabuleiro_texture = IMG_LoadTexture(renderer, "./img/boardQuad2.png");
-    SDL_Texture *ficha_vermelha = IMG_LoadTexture(renderer, "./img/fichaVermelha.png");
-    SDL_Texture *ficha_azul = IMG_LoadTexture(renderer, "./img/fichaAzul.png");
+    SDL_Texture *ficha_vermelha = IMG_LoadTexture(renderer, "./img/fichaVermelha2.png");
+    SDL_Texture *ficha_azul = IMG_LoadTexture(renderer, "./img/fichaAzul2.png");
 
     SDL_Rect tabuleiroRect;
     tabuleiroRect.x = 50;
@@ -38,7 +40,7 @@ int main(int argc, char *argv[])
     // Inicializa a posição dos botões de coluna
     for (int i = 0; i < COLUNAS; i++) {
         botao_coluna[i].x = tabuleiroRect.x + (i * (tabuleiroRect.w / COLUNAS));
-        botao_coluna[i].y = tabuleiroRect.y - 40; // Acima do tabuleiro
+        botao_coluna[i].y = tabuleiroRect.y; // Acima do tabuleiro
         botao_coluna[i].w = tabuleiroRect.w / COLUNAS;
         botao_coluna[i].h = 40;  // Altura do botão
     }
@@ -125,12 +127,17 @@ void cairDisco(int coluna, int time)
     }
 }
 
+
 // Função para renderizar o tabuleiro com todas as fichas já jogadas
 void renderizarTabuleiro(SDL_Renderer *renderer, SDL_Texture *ficha_vermelha, SDL_Texture *ficha_azul, SDL_Rect *tabuleiroRect)
 {
     SDL_Rect discoRect;
-    discoRect.w = (tabuleiroRect->w / COLUNAS) * 0.9;  // 90% do tamanho da célula
-    discoRect.h = (tabuleiroRect->h / LINHAS) * 0.9;  // 90% do tamanho da célula
+
+    int disco_w = tabuleiroRect->w / COLUNAS;
+    int disco_h = tabuleiroRect->h / LINHAS;
+
+    discoRect.w = disco_w * 0.9;  // 90% do tamanho da célula
+    discoRect.h = disco_h * 0.9;  // 90% do tamanho da célula
 
     for (int i = 0; i < LINHAS; i++)
     {
@@ -138,8 +145,10 @@ void renderizarTabuleiro(SDL_Renderer *renderer, SDL_Texture *ficha_vermelha, SD
         {
             if (tabuleiro[i][j] != 0)  // Se houver uma ficha na posição
             {
-                discoRect.x = tabuleiroRect->x + j * (tabuleiroRect->w / COLUNAS) + (tabuleiroRect->w / COLUNAS) * 0.05;
-                discoRect.y = tabuleiroRect->y + i * (tabuleiroRect->h / LINHAS) + (tabuleiroRect->h / LINHAS) * 0.05;
+                // Corrigido para centralizar
+                discoRect.x = tabuleiroRect->x + j * disco_w + (disco_w - discoRect.w) / 2;
+                discoRect.y = tabuleiroRect->y + i * disco_h + (disco_h - discoRect.h) / 2;
+
 
                 if (tabuleiro[i][j] == 1)  // Ficha azul
                 {
@@ -153,4 +162,3 @@ void renderizarTabuleiro(SDL_Renderer *renderer, SDL_Texture *ficha_vermelha, SD
         }
     }
 }
-
