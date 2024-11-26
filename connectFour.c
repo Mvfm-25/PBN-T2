@@ -2,19 +2,24 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <time.h>
 
 #define LINHAS 6
 #define COLUNAS 7
 
 int tabuleiro[LINHAS][COLUNAS] = {0};  // Tabuleiro inicializado com zeros
-
 SDL_Rect botao_coluna[COLUNAS];  // Definindo um array de botões para cada coluna
+int ultimaJogadaUsuario = -1;    // Armazena a última jogada do jogador humano
 
 // Função para verificar se o clique está dentro de algum botão de coluna
 int clicouEmBotaoColuna(int posMouseX, SDL_Rect *botao_coluna);
 
 // Função para fazer o disco "cair" na coluna selecionada
 void cairDisco(int coluna, int time);
+
+// Função para a jogada da CPU
+int jogadaCPU();
 
 // Função para renderizar os discos jogados
 void renderizarDiscos(SDL_Renderer *renderer, SDL_Texture *ficha_vermelha, SDL_Texture *ficha_azul);
@@ -30,6 +35,7 @@ bool verificarVencedor();
 
 int main(int argc, char *argv[])
 {
+    srand(time(NULL)); // Inicializa o gerador de números aleatórios
     SDL_Init(SDL_INIT_EVERYTHING);
     SDL_Window* janela = SDL_CreateWindow("Connect 4 - G.D.M.", 100, 100, 800, 600, SDL_WINDOW_SHOWN);
     SDL_Renderer *renderer = SDL_CreateRenderer(janela, -1, 0);
@@ -55,6 +61,11 @@ int main(int argc, char *argv[])
     int determinaVez = 0;  // 0 para ficha azul, 1 para ficha vermelha
     bool jogoAtivo = true;
 
+    // Modo de jogo: 1 = Jogador x Jogador, 2 = Jogador x CPU
+    int modoDeJogo;
+    printf("Escolha o modo de jogo:\n1 - Jogador x Jogador\n2 - Jogador x CPU\n");
+    scanf("%d", &modoDeJogo);
+
     while (jogoAtivo)
     {
         SDL_Event evento;
@@ -67,7 +78,7 @@ int main(int argc, char *argv[])
                 SDL_DestroyWindow(janela);
                 SDL_Quit();
             }
-            else if (evento.type == SDL_MOUSEBUTTONDOWN && evento.button.button == SDL_BUTTON_LEFT)
+            else if (evento.type == SDL_MOUSEBUTTONDOWN && evento.button.button == SDL_BUTTON_LEFT && determinaVez == 0)
             {
                 int mouse_x = evento.button.x;
 
@@ -82,6 +93,7 @@ int main(int argc, char *argv[])
                     if (verificarVencedor())
                     {
                         printf("Fim de jogo! Jogador %d venceu!\n", determinaVez + 1);
+                        SDL_Delay(5000);
                         jogoAtivo = false;
                     }
 
@@ -92,6 +104,26 @@ int main(int argc, char *argv[])
                 {
                     printf("Clique fora dos botões!\n");
                 }
+            }
+        }
+
+        // Jogada da CPU
+        if (modoDeJogo == 2 && determinaVez == 1)
+        {
+            int coluna = jogadaCPU();
+            if (coluna != -1) // Garantia de jogada válida
+            {
+                cairDisco(coluna, determinaVez);
+                printf("CPU jogou na coluna %d\n", coluna);
+
+                if (verificarVencedor())
+                {
+                    printf("Fim de jogo! Jogador %d venceu!\n", determinaVez + 1);
+                    SDL_Delay(5000);
+                    jogoAtivo = false;
+                }
+
+                determinaVez = (determinaVez + 1) % 2;
             }
         }
 
@@ -107,7 +139,6 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-// Função para verificar se o clique foi em uma das colunas
 int clicouEmBotaoColuna(int posMouseX, SDL_Rect *botao_coluna)
 {
     for (int i = 0; i < COLUNAS; i++) {
@@ -118,20 +149,45 @@ int clicouEmBotaoColuna(int posMouseX, SDL_Rect *botao_coluna)
     return -1;  // Retorna -1 se não clicou em nenhum botão válido
 }
 
-// Função para simular o disco caindo e registrar o movimento no tabuleiro
 void cairDisco(int coluna, int time)
 {
     for (int i = LINHAS - 1; i >= 0; i--)
     {
-        if (tabuleiro[i][coluna] == 0)  // Verifica se a célula está vazia
+        if (tabuleiro[i][coluna] == 0)
         {
             tabuleiro[i][coluna] = time + 1; // 1 para Azul e 2 para Vermelho
+            if (time == 0) // Atualiza a última jogada do jogador humano
+                ultimaJogadaUsuario = coluna;
             break;
         }
     }
 }
 
-// Função para renderizar os discos jogados
+int jogadaCPU()
+{
+    if (ultimaJogadaUsuario == -1)
+    {
+        printf("Aguardando jogada do usuário...\n");
+        return -1;
+    }
+
+    int coluna = ultimaJogadaUsuario;
+    if (tabuleiro[0][coluna] != 0)
+    {
+        if (coluna > 0 && tabuleiro[0][coluna - 1] == 0) {
+            coluna = coluna - 1;
+        } else if (coluna < COLUNAS - 1 && tabuleiro[0][coluna + 1] == 0) {
+            coluna = coluna + 1;
+        } else {
+            do {
+                coluna = rand() % COLUNAS;
+            } while (tabuleiro[0][coluna] != 0);
+        }
+    }
+
+    return coluna;
+}
+
 void renderizarDiscos(SDL_Renderer *renderer, SDL_Texture *ficha_vermelha, SDL_Texture *ficha_azul)
 {
     SDL_Rect discoRect;
@@ -147,16 +203,16 @@ void renderizarDiscos(SDL_Renderer *renderer, SDL_Texture *ficha_vermelha, SDL_T
     {
         for (int j = 0; j < COLUNAS; j++)
         {
-            if (tabuleiro[i][j] != 0)  // Há uma ficha na célula
+            if (tabuleiro[i][j] != 0)
             {
                 discoRect.x = offsetX + j * spacingX;
                 discoRect.y = offsetY + i * spacingY;
 
-                if (tabuleiro[i][j] == 1)  // Ficha azul
+                if (tabuleiro[i][j] == 1)
                 {
                     SDL_RenderCopy(renderer, ficha_azul, NULL, &discoRect);
                 }
-                else if (tabuleiro[i][j] == 2)  // Ficha vermelha
+                else if (tabuleiro[i][j] == 2)
                 {
                     SDL_RenderCopy(renderer, ficha_vermelha, NULL, &discoRect);
                 }
@@ -165,7 +221,6 @@ void renderizarDiscos(SDL_Renderer *renderer, SDL_Texture *ficha_vermelha, SDL_T
     }
 }
 
-// Função recursiva para verificar a vitória
 bool verificarVitoriaRecursiva(int linha, int coluna, int jogador, int direcaoX, int direcaoY, int contador)
 {
     if (linha < 0 || linha >= LINHAS || coluna < 0 || coluna >= COLUNAS)
@@ -181,7 +236,6 @@ bool verificarVitoriaRecursiva(int linha, int coluna, int jogador, int direcaoX,
     return verificarVitoriaRecursiva(linha + direcaoX, coluna + direcaoY, jogador, direcaoX, direcaoY, contador);
 }
 
-// Função para verificar todas as direções
 bool verificarVitoria(int linha, int coluna, int jogador)
 {
     int direcoes[4][2] = {{0, 1}, {1, 0}, {1, 1}, {1, -1}};
@@ -193,17 +247,15 @@ bool verificarVitoria(int linha, int coluna, int jogador)
     return false;
 }
 
-// Função principal para verificar o tabuleiro
 bool verificarVencedor()
 {
     for (int i = 0; i < LINHAS; i++)
     {
         for (int j = 0; j < COLUNAS; j++)
         {
-            if (tabuleiro[i][j] != 0)
+            if (tabuleiro[i][j] != 0 && verificarVitoria(i, j, tabuleiro[i][j]))
             {
-                if (verificarVitoria(i, j, tabuleiro[i][j]))
-                    return true;
+                return true;
             }
         }
     }
